@@ -1,18 +1,24 @@
-from flask_wtf import FlaskForm
-from wtforms import StringField
-from wtforms import BooleanField, SubmitField
-from wtforms.fields.choices import SelectField
-from wtforms.fields.datetime import DateTimeField
-from wtforms.fields.numeric import IntegerField
-from wtforms.validators import DataRequired, Optional
+import datetime
+import sqlalchemy
+from sqlalchemy.util.preloaded import orm
+
+from .db_session import SqlAlchemyBase
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
-class JobsForm(FlaskForm):
-    team_leader = SelectField('Руководитель', coerce=int, validators=[DataRequired()])
-    job = StringField('Описание работы', validators=[DataRequired()])
-    work_size = IntegerField('Объем работы в часах', validators=[DataRequired()])
-    collaborators = StringField('Список id участников')
-    start_date = DateTimeField('Дата начала', format="%Y-%m-%dT%H:%M", validators=[Optional()])
-    end_date = DateTimeField('Дата окончания', format="%Y-%m-%dT%H:%M", validators=[Optional()])
-    is_finished = BooleanField('Признак завершения')
-    submit = SubmitField('Создать')
+class Jobs(SqlAlchemyBase):
+    __tablename__ = 'jobs'
+
+    id = sqlalchemy.Column(sqlalchemy.Integer,
+                           primary_key=True, autoincrement=True)
+    team_leader = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('users.id'))
+    job = sqlalchemy.Column(sqlalchemy.String, nullable=True)
+    work_size = sqlalchemy.Column(sqlalchemy.Integer, nullable=True, default=0)
+    collaborators = sqlalchemy.Column(sqlalchemy.String, nullable=True)
+    start_date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=True)
+    end_date = sqlalchemy.Column(sqlalchemy.DateTime, nullable=True)
+
+    is_finished = sqlalchemy.Column(sqlalchemy.Boolean,
+                                    default=False)
+    user = orm.relationship('User')
+

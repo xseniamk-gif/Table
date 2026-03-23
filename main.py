@@ -3,16 +3,21 @@ from flask_login import LoginManager, login_user, login_required, logout_user
 from flask import Flask, render_template, redirect
 from sqlalchemy.orm.collections import collection
 
+import app
 from data import db_session
-from data.jobs import JobsForm
+from data.departments import Department
+from data.jobs import Jobs
+from data.users import User
+from forms.jobsForm import JobsForm
+from forms.login import RegisterForm
 
-from forms.login import User
 from forms.loginform import LoginForm
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 login_manager = LoginManager()
 login_manager.init_app(app)
+
 
 def init_data_users():
     session = db_session.create_session()
@@ -56,44 +61,85 @@ def init_data_users():
         email="sc@mars.org")
     user3.set_password("123")
 
+    user4 = User(
+        surname="Jon",
+        name="Mirfy",
+        age=25,
+        position="energying",
+        speciality="engineer",
+        address="module_1",
+        email="ku@mars.org")
+    user4.set_password("123")
+
+    user5 = User(
+        surname="Sanders",
+        name="Teddy",
+        age=28,
+        position="geologist",
+        speciality="geology",
+        address="module_1",
+        email="sanders@mars.org")
+    user5.set_password("123")
+
     session.add(user)
     session.add(user1)
     session.add(user2)
     session.add(user3)
+    session.add(user4)
+    session.add(user5)
     session.commit()
 
 
 def init_data_jobs():
     db_sess = db_session.create_session()
-    # user = db_sess.query(User).filter(User.id == 1).first()
-    job1 = JobsForm(team_leader=1, job='deployment of residential modules 1 and 2',
-                work_size=15, is_finished=False, collaborators='1, 2')
-    job2 = JobsForm(team_leader=2, job=' of residential modules 1 and 2',
-                work_size=15, is_finished=False, collaborators='1, 2')
-    job3 = JobsForm(team_leader=3, job='sincist',
-                work_size=15, is_finished=False, collaborators='3, 2')
-    job4 = JobsForm(team_leader=4, job='deployment of work',
-                work_size=15, is_finished=True, collaborators='4, 2')
+    job1 = Jobs(team_leader=1, job='deployment of residential modules 1 and 2',
+                work_size=15, is_finished=False, collaborators='2')
+    job2 = Jobs(team_leader=2, job='maintenance of residential modules',
+                work_size=10, is_finished=False, collaborators='1')
+    job3 = Jobs(team_leader=3, job='research work',
+                work_size=20, is_finished=False, collaborators='3')
+    job4 = Jobs(team_leader=4, job='geological survey',
+                work_size=12, is_finished=True, collaborators='4,5')
+    job5 = Jobs(team_leader=5, job='soil analysis',
+                work_size=8, is_finished=False, collaborators='4')
+    job6 = Jobs(team_leader=3, job='data processing',
+                work_size=18, is_finished=False, collaborators='3,5')
+    job7 = Jobs(team_leader=1, job='module installation',
+                work_size=25, is_finished=True, collaborators='1,2')
 
     db_sess.add(job1)
     db_sess.add(job2)
     db_sess.add(job3)
     db_sess.add(job4)
+    db_sess.add(job5)
+    db_sess.add(job6)
+    db_sess.add(job7)
     db_sess.commit()
+
+
+def init_data_deps():
+    db_sess = db_session.create_session()
+    dep1 = Department(title='геологическая разведка', chief=3, members=[4, 5], email='geology@mars.org')
+    dep2 = Department(title='изучение явлений', chief=2, members=[3], email='phenomena@mars.org')
+    dep3 = Department(title='инженерный отдел', chief=1, members=[1, 2, 3], email='engineering@mars.org')
+
+    db_sess.add(dep1)
+    db_sess.add(dep2)
+    db_sess.add(dep3)
+    db_sess.commit()
+
 
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
-    return db_sess.get(User,user_id)
-
+    return db_sess.get(User, user_id)
 
 
 @app.route("/")
 def index():
     db_sess = db_session.create_session()
-    jobs = db_sess.query(JobsForm).all()
+    jobs = db_sess.query(Jobs).all()
     return render_template("index.html", jobs=jobs)
-
 
 
 @login_required
@@ -109,7 +155,7 @@ def addjob():
             job=form.job.data,
             work_size=form.work_size.data,
             team_leader=form.team_leader.data,
-            is_finished = form.is_finished.data
+            is_finished=form.is_finished.data
         )
         if form.collaborators.data:
             job.collaborators = form.collaborators.data
@@ -122,6 +168,7 @@ def addjob():
         db_sess.commit()
         return redirect('/')
     return render_template('addjobs.html', title='Добавление работы', form=form)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -145,40 +192,84 @@ def logout():
     return redirect("/")
 
 
-#
-# @app.route('/register', methods=['GET', 'POST'])
-# def reqister():
-#     form = RegisterForm()
+@app.route('/register', methods=['GET', 'POST'])
+def reqister():
+    form = RegisterForm()
+    if form.validate_on_submit():
+        if form.password.data != form.password_again.data:
+            return render_template('register.html', title='Регистрация',
+                                   form=form,
+                                   message="Пароли не совпадают")
+        db_sess = db_session.create_session()
+        if db_sess.query(User).filter(User.email == form.email.data).first():
+            return render_template('register.html', title='Регистрация',
+                                   form=form,
+                                   message="Такой пользователь уже есть")
+        user = User(
+            name=form.name.data,
+            surname=form.surname.data,
+            email=form.email.data
+
+        )
+
+        user.set_password(form.password.data)
+        db_sess.add(user)
+        db_sess.commit()
+        return redirect('/')
+    return render_template('register.html', title='Регистрация', form=form)
+
+# @app.route('/jobs_reg',  methods=['GET', 'POST'])
+# @login_required
+# def add_news():
+#     form = NewsForm()
 #     if form.validate_on_submit():
-#         if form.password.data != form.password_again.data:
-#             return render_template('register.html', title='Регистрация',
-#                                    form=form,
-#                                    message="Пароли не совпадают")
 #         db_sess = db_session.create_session()
-#         if db_sess.query(User).filter(User.email == form.email.data).first():
-#             return render_template('register.html', title='Регистрация',
-#                                    form=form,
-#                                    message="Такой пользователь уже есть")
-#         user = User(
-#             name=form.name.data,
-#             surname=form.surname.data,
-#             email=form.email.data,
-#             age=form.age.data,
-#             position=form.position.data,
-#             speciality=form.speciality.data,
-#             address=form.address.data,
-#         )
-#         user.set_password("123")
-#         user.set_password(form.password.data)
-#         db_sess.add(user)
+#         news = News()
+#         news.title = form.title.data
+#         news.content = form.content.data
+#         news.is_private = form.is_private.data
+#         current_user.news.append(news)
+#         db_sess.merge(current_user)
 #         db_sess.commit()
 #         return redirect('/')
-#     return render_template('register.html', title='Регистрация', form=form)
+#     return render_template('news.html', title='Добавление новости',
+#                            form=form)
 
 def main():
     db_session.global_init("db/mars_explorer.db")
     # init_data_users()
     # init_data_jobs()
+    # init_data_deps()
+
+    # sess = db_session.create_session()
+    # department = sess.query(Department).filter(Department.id == 1).first()
+    #
+    # if department and department.members:
+    #
+    #     total_hours_by_user = {}
+    #
+    #     for user_id in department.members:
+    #         total_hours = 0
+    #
+    #         jobs = sess.query(Jobs).all()
+    #
+    #         for job in jobs:
+    #             if job.team_leader == user_id:
+    #                 total_hours += job.work_size
+    #
+    #             if job.collaborators:
+    #                 collaborators = [int(x.strip()) for x in job.collaborators.split(',')]
+    #                 if user_id in collaborators:
+    #                     total_hours += job.work_size
+    #
+    #         total_hours_by_user[user_id] = total_hours
+    #
+    #     for user_id, total in total_hours_by_user.items():
+    #         if total > 25:
+    #             user = sess.get(User, user_id)
+    #             if user:
+    #                 print(f"{user.surname} {user.name}")
+
     app.run()
 
 

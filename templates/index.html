@@ -27,9 +27,19 @@
                         <td class="table-danger">Jobs is not finished</td>
                     {% endif %}
                 </tr>
-
             </tbody>
         </table>
+
+    <div>
+        <a href="/jobs/{{ item.id }}" class="btn btn-warning">
+            Изменить
+        </a>
+        <a href="/jobs_delete/{{ item.id }}" class="btn btn-danger">
+            Удалить
+        </a>
+    </div>
+
+
     </div>
     {% endfor %}
 {% endblock %}

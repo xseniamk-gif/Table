@@ -5,7 +5,7 @@ from . import db_session
 from .jobs import Jobs
 
 blueprint = flask.Blueprint(
-    'jobs_api',
+    'news_api',
     __name__,
     template_folder='templates'
 )
@@ -61,6 +61,7 @@ def create_jobs():
     db_sess.commit()
     return jsonify({'id': jobs.id, 'jobs': jobs.to_dict(only=(
                 'id', 'team_leader', 'job', 'work_size'))})
+
 
 
 
